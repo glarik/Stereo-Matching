@@ -11,6 +11,7 @@ import os, time, pickle, random, itertools
 DATA = './data/'
 # window size
 N = 2
+DMAX = 8
 
 # calculate means of windows of size n and take average, then normalize
 # use means to calculate and save variances for later use
@@ -53,18 +54,46 @@ def pre_proc(im):
 
     return (im-means,variances)
 
+def match(left, right, matches):
+    def score_fcn(l,r):
+        return np.abs(r - l)
+    # match from L(r,0) to L(r,last-DMAX)
+    for r in range(left.shape[0]):
+        for c in range(left.shape[1]-DMAX):
+            # for each pixel in L we calculate similarity between L(r,c) and R(r,c to c+DMAX)
+            best = np.inf
+            for d in range(DMAX):
+                score = score_fcn(left[r,c], right[r,c+d])
+                if score < best:
+                    best = score
+                    matches[r,c] = np.array([r,c+d])
+            # we need to check for multiple matches to single R pixel
+            for x in range(c+1):
+                if np.array_equal(matches[r,c], matches[r,x]):
+                    old_score = score_fcn(left[r,x],right[matches[r,x]])
+                    if old_score < best:
+                        #keep old match
+                        matches[r,c] = np.array([-1,-1])
+                    else:
+                        # keep new match, discard old_score
+                        matches[r,x] = np.array([-1,-1])
+
+    return matches
+
 def main():
     # load and normalize ims
     im0 = np.array(Image.open(DATA+'map/im0.pgm'))
     im1 = np.array(Image.open(DATA+'map/im1.pgm'))
 
-    print im0[200,200]
-
     (im0, im0vars) = pre_proc(im0)
     (im1, im1vars) = pre_proc(im1)
 
-    print im0[200,200]
-    print 'done'
+    # match im0 to im1
+    # make array to hold matches with all entries = -1
+    # (since this will be array of coordinates, val of -1 means uninitialized)
+    matches = np.negative(np.ones((im0.shape[0],im0.shape[1],2)))
+
+    matches = match(im0, im1, matches)
 
 if __name__ == '__main__':
     main()
