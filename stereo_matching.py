@@ -70,7 +70,7 @@ def match(left, right, matches):
             # we need to check for multiple matches to single R pixel
             for x in range(c+1):
                 if np.array_equal(matches[r,c], matches[r,x]):
-                    old_score = score_fcn(left[r,x],right[matches[r,x]])
+                    old_score = score_fcn(left[r,x], right[matches[r,x][0],matches[r,x][1]])
                     if old_score < best:
                         #keep old match
                         matches[r,c] = np.array([-1,-1])
@@ -85,15 +85,19 @@ def main():
     im0 = np.array(Image.open(DATA+'map/im0.pgm'))
     im1 = np.array(Image.open(DATA+'map/im1.pgm'))
 
+    start = time.time()
     (im0, im0vars) = pre_proc(im0)
     (im1, im1vars) = pre_proc(im1)
+    norm_done = time.time()
+    print "Normalization took:", norm_done - start
 
     # match im0 to im1
     # make array to hold matches with all entries = -1
     # (since this will be array of coordinates, val of -1 means uninitialized)
-    matches = np.negative(np.ones((im0.shape[0],im0.shape[1],2)))
-
+    matches = np.negative(np.ones((im0.shape[0],im0.shape[1],2), dtype=np.int))
     matches = match(im0, im1, matches)
+    matching_done = time.time()
+    print "Matching took:", matching_done - norm_done
 
 if __name__ == '__main__':
     main()
